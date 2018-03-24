@@ -243,6 +243,9 @@ function passesRegex(options, file) {
 
 function watch(options, emitter) {
 
+  var initComplete = false;
+  var lastFiles = [];
+
   var buildGraph = function(options) {
     var graph;
     var graphOptions = {
@@ -305,21 +308,37 @@ function watch(options, emitter) {
       }
     });
 
-    files.forEach(function(file) {
-      if (path.basename(file)[0] !== '_') {
-        renderFile(file, options, emitter);
-      }
-    });
+    if (initComplete) {
+      files.forEach(function(file) {
+        if (path.basename(file)[0] !== '_') {
+          renderFile(file, options, emitter);
+        }
+      });
+    } else {
+      lastFiles = files;
+    }
   }
 
-  watcher.on('change', watcherHandler).on('add', function(file) {
-    if (options.directory && file.indexOf(path.resolve(options.directory)) !== -1) {
+  watcher
+    .on('ready', function() {
+      initComplete = true;
+      lastFiles.forEach(function(file) {
+        if (path.basename(file)[0] !== '_') {
+          renderFile(file, options, emitter);
+        }
+      });
+    })
+    .on('change', watcherHandler)
+    .on('add', function(file) {
+      if (
+        options.directory &&
+        file.indexOf(path.resolve(options.directory)) !== -1
+      ) {
         watcherHandler(file);
-    }
-    else {
-      watcherHandler(file);
-    }
-  });
+      } else {
+        watcherHandler(file);
+      }
+    });
 }
 
 /**
